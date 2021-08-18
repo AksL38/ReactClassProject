@@ -1,8 +1,8 @@
 import "./App.css";
-import PostApp from "./PostApp";
+import FinalProject from "./FinalProject";
 
 function App() {
-  return <PostApp />;
+  return <FinalProject />;
 }
 
 export default App;
