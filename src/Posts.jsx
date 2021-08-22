@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { Link } from "react-router-dom";
 
 export default function Posts() {
   const [posts, setPosts] = useState([]);
@@ -9,11 +10,14 @@ export default function Posts() {
   }, []);
 
   const fetchPosts = async () => {
-    let { data } = await axios.get(
-      "https://jsonplaceholder.typicode.com/posts"
-    );
-
-    setPosts(data);
+    try {
+      let { data } = await axios.get(
+        "https://jsonplaceholder.typicode.com/posts"
+      );
+      setPosts(data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const [users, setUsers] = useState([]);
@@ -23,14 +27,18 @@ export default function Posts() {
   }, []);
 
   const fetchUsers = async () => {
-    let { data } = await axios.get(
-      "https://jsonplaceholder.typicode.com/users"
-    );
-
-    setUsers(data);
+    try {
+      let { data } = await axios.get(
+        "https://jsonplaceholder.typicode.com/users"
+      );
+      setUsers(data);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const [formData, setFormData] = useState({
+    userId: "",
     id: "",
     name: "Choose one ...",
     title: "",
@@ -54,7 +62,7 @@ export default function Posts() {
           let index = users.findIndex((user) => {
             return user.name === value;
           });
-          data.id = users[index].id;
+          data.userId = users[index].id;
         }
         break;
       case "title":
@@ -82,7 +90,7 @@ export default function Posts() {
 
   useEffect(() => {
     if (
-      formData.id !== "" &&
+      formData.userId !== "" &&
       formData.name !== "Choose one ..." &&
       formData.title !== "" &&
       formData.description !== ""
@@ -104,12 +112,18 @@ export default function Posts() {
   const handleSubmit = (e) => {
     e.preventDefault();
     let newEntry = {
-      userId: formData.id,
+      userId: formData.userId,
       title: formData.title,
       body: formData.description,
     };
-    updatePosts(newEntry);
+    if (formData.id === "") {
+      updatePosts(newEntry);
+    } else {
+      newEntry.id = formData.id;
+      updatePost(newEntry);
+    }
     setFormData({
+      userId: "",
       id: "",
       name: "Choose one ...",
       title: "",
@@ -124,74 +138,169 @@ export default function Posts() {
   };
 
   const updatePosts = async (newEntry) => {
-    let { data } = await axios.post(
-      "https://jsonplaceholder.typicode.com/posts",
-      newEntry
-    );
-    let newPosts = [...posts];
-    newPosts.push(data);
-    setPosts(newPosts);
+    try {
+      let { data } = await axios.post(
+        "https://jsonplaceholder.typicode.com/posts",
+        newEntry
+      );
+      let newPosts = [...posts];
+      newPosts.push(data);
+      setPosts(newPosts);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const updatePost = async (newEntry) => {
+    try {
+      let { data } = await axios.put(
+        "https://jsonplaceholder.typicode.com/posts/" + newEntry.id,
+        newEntry
+      );
+      let index = posts.findIndex((post) => {
+        return post.id === data.id;
+      });
+      let newPosts = [...posts];
+      newPosts[index] = data;
+      setPosts(newPosts);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleEdit = (post) => {
+    let index = users.findIndex((user) => {
+      return user.id === post.userId;
+    });
+    post.name = users[index].name;
+    setFormData({
+      userId: post.userId,
+      id: post.id,
+      name: post.name,
+      title: post.title,
+      description: post.body,
+      errors: {
+        name: "",
+        title: "",
+        description: "",
+      },
+    });
+  };
+
+  const handleDelete = async (post) => {
+    if (formData.id === post.id) {
+      setFormData({
+        userId: "",
+        id: "",
+        name: "Choose one ...",
+        title: "",
+        description: "",
+        errors: {
+          name: "",
+          title: "",
+          description: "",
+        },
+      });
+    }
+    try {
+      await axios.delete(
+        "https://jsonplaceholder.typicode.com/posts/" + post.id
+      );
+      let index = posts.findIndex((val) => {
+        return val.id === post.id;
+      });
+      let newPosts = [...posts];
+      newPosts.splice(index, 1);
+      setPosts(newPosts);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
     <>
-      <form onSubmit={handleSubmit}>
-        <label>Username </label>
-        <select name="name" value={formData.name} onChange={handleChange}>
-          <option value="Choose one ...">Choose one ...</option>{" "}
-          {users.map((user) => {
-            return (
-              <option value={user.name} key={user.id}>
-                {user.name}
-              </option>
-            );
-          })}
-        </select>
-        <span>{formData.errors.name}</span>
+      <div className=" mx-5 text-primary">
+        <h3>Create new post</h3>
+        <form onSubmit={handleSubmit}>
+          <label>Username </label>
+          <br />
+          <select name="name" value={formData.name} onChange={handleChange}>
+            <option value="Choose one ...">Choose one ...</option>{" "}
+            {users.map((user) => {
+              return (
+                <option value={user.name} key={user.id}>
+                  {user.name}
+                </option>
+              );
+            })}
+          </select>
+          <span>{formData.errors.name}</span>
+          <br />
+          <label>Title </label>
+          <br />
+          <input
+            type="text"
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
+          />
+          <span>{formData.errors.title}</span>
+          <br />
+          <label>Description </label>
+          <br />
+          <input
+            type="text"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+          />
+          <span>{formData.errors.description}</span>
+          <br />
+          <br />
+          <button disabled={!allowSubmit}>Submit</button>
+        </form>
+      </div>
+      <br />
+      <div className="mx-5 text-primary">
+        <h3>Posts so far ....</h3>
         <br />
-        <label>Title </label>
-        <input
-          type="text"
-          name="title"
-          value={formData.title}
-          onChange={handleChange}
-        />
-        <span>{formData.errors.title}</span>
-        <br />
-        <label>Description </label>
-        <input
-          type="text"
-          name="description"
-          value={formData.description}
-          onChange={handleChange}
-        />
-        <span>{formData.errors.description}</span>
-        <br />
-        <button disabled={!allowSubmit}>Submit</button>
-      </form>
-      <h3>Posts so far ....</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>User Id</th>
-            <th>Post Id</th>
-            <th>Title</th>
-            <th>Description</th>
-          </tr>
-        </thead>
-        <tbody>
-          {posts.map((post) => {
-            return (
-              <tr key={post.id}>
-                <td>{post.userId}</td>
-                <td>{post.id}</td>
-                <td>{post.title}</td>
-                <td>{post.body}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+        <table className="table table-bordered">
+          <thead className="table-primary">
+            <tr>
+              <th>User Id</th>
+              <th>Post Id</th>
+              <th>Title</th>
+              <th>Description</th>
+              <th>Edit</th>
+              <th>Delete</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {posts.map((post) => {
+              return (
+                <tr key={post.id}>
+                  <td>{post.userId}</td>
+                  <td>{post.id}</td>
+                  <td>{post.title}</td>
+                  <td>{post.body}</td>
+                  <td>
+                    <button onClick={() => handleEdit(post)}>Edit</button>
+                  </td>
+                  <td>
+                    <button onClick={() => handleDelete(post)}>Delete</button>
+                  </td>
+                  <td>
+                    <button>
+                      <Link to={"/posts/" + post.id}>More</Link>
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
